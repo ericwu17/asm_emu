@@ -30,7 +30,7 @@ fn main() {
     let (verbs, map) = get_tokens(contents);
 
     for verb in verbs {
-        println!("{}", verb);
+        println!("{}", verb.as_hex_file_line());
     }
     dbg!(map);
 }

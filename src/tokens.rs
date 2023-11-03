@@ -5,13 +5,6 @@ use crate::{
     source_cursor::SourceCodeCursor,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Token {
-    Verb(Verb),
-    Operand(Operand),
-    Label(String),
-}
-
 pub fn get_tokens(source_code_contents: String) -> (Vec<Verb>, HashMap<String, u16>) {
     // we return Vec<Vec<Token>> to indicate a list of lines in the source_code,
     // where each line has multiple tokens.

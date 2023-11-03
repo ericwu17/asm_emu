@@ -1,2 +1,4 @@
 /target
 code.asm
+vars.locations
+seq.code

@@ -62,6 +62,22 @@ pub enum Operand {
     MemAtImm(u16),
 }
 
+impl Operand {
+    pub fn to_reg(&self) -> Reg {
+        match self {
+            Operand::Reg(r) => *r,
+            _ => panic!(),
+        }
+    }
+
+    pub fn to_imm(&self) -> u16 {
+        match self {
+            Operand::Imm(imm) => *imm,
+            _ => panic!(),
+        }
+    }
+}
+
 impl Reg {
     fn to_id(&self) -> u8 {
         match self {
@@ -82,6 +98,16 @@ impl Reg {
             Reg::R14 => 14,
             Reg::R15 => 15,
         }
+    }
+
+    fn write_into_byte_lower(&self, b: &mut u8) {
+        *b &= 0xF0;
+        *b |= self.to_id();
+    }
+
+    fn write_into_byte_upper(&self, b: &mut u8) {
+        *b &= 0x0F;
+        *b |= self.to_id() << 4;
     }
 }
 
@@ -133,4 +159,181 @@ impl fmt::Display for Verb {
             Verb::Halt => write!(f, "halt"),
         }
     }
+}
+
+impl Verb {
+    pub fn to_bytes(&self) -> [u8; 3] {
+        let mut res = [0, 0, 0];
+
+        match self {
+            Verb::Mov(op1, op2) => match (op1, op2) {
+                (Operand::Reg(r1), Operand::Imm(imm)) => {
+                    res[0] = 0x10;
+                    r1.write_into_byte_lower(&mut res[0]);
+                    [res[1], res[2]] = imm.to_be_bytes();
+                }
+                (Operand::Reg(r1), Operand::MemAtImm(imm)) => {
+                    res[0] = 0x20;
+                    r1.write_into_byte_lower(&mut res[0]);
+                    [res[1], res[2]] = imm.to_be_bytes();
+                }
+                (Operand::MemAtImm(imm), Operand::Reg(r1)) => {
+                    res[0] = 0x30;
+                    r1.write_into_byte_lower(&mut res[0]);
+                    [res[1], res[2]] = imm.to_be_bytes();
+                }
+                (Operand::Reg(r1), Operand::Reg(r2)) => {
+                    res[0] = 0xF0;
+                    res[1] = 0x00;
+                    r1.write_into_byte_upper(&mut res[2]);
+                    r2.write_into_byte_lower(&mut res[2]);
+                }
+                (Operand::Reg(ra), Operand::MemAtReg(rb)) => {
+                    res[0] = 0xF0;
+                    res[1] = 0x01;
+                    ra.write_into_byte_upper(&mut res[2]);
+                    rb.write_into_byte_lower(&mut res[2]);
+                }
+                (Operand::MemAtReg(ra), Operand::Reg(rb)) => {
+                    res[0] = 0xF0;
+                    res[1] = 0x02;
+                    ra.write_into_byte_upper(&mut res[2]);
+                    rb.write_into_byte_lower(&mut res[2]);
+                }
+                _ => unreachable!(),
+            },
+
+            Verb::Jmp(operand) => {
+                res[0] = 0xE3;
+                [res[1], res[2]] = operand.to_imm().to_be_bytes();
+            }
+            Verb::Jz(imm, r)
+            | Verb::Jnz(imm, r)
+            | Verb::Jpos(imm, r)
+            | Verb::Jposz(imm, r)
+            | Verb::Jneg(imm, r)
+            | Verb::Jnegz(imm, r) => {
+                res[0] = match self {
+                    Verb::Jz(_, _) => 0x40,
+                    Verb::Jnz(_, _) => 0x50,
+                    Verb::Jpos(_, _) => 0x60,
+                    Verb::Jposz(_, _) => 0x70,
+                    Verb::Jneg(_, _) => 0x80,
+                    Verb::Jnegz(_, _) => 0x90,
+                    _ => unreachable!(),
+                };
+                r.to_reg().write_into_byte_lower(&mut res[0]);
+                [res[1], res[2]] = imm.to_imm().to_be_bytes();
+            }
+
+            Verb::Setz(ra, rb)
+            | Verb::Setnz(ra, rb)
+            | Verb::Setpos(ra, rb)
+            | Verb::Setposz(ra, rb)
+            | Verb::Setneg(ra, rb)
+            | Verb::Setnegz(ra, rb) => {
+                res[0] = 0xF0;
+                res[1] = match self {
+                    Verb::Setz(_, _) => 0x10,
+                    Verb::Setnz(_, _) => 0x11,
+                    Verb::Setpos(_, _) => 0x12,
+                    Verb::Setposz(_, _) => 0x13,
+                    Verb::Setneg(_, _) => 0x14,
+                    Verb::Setnegz(_, _) => 0x15,
+                    _ => unreachable!(),
+                };
+                ra.to_reg().write_into_byte_upper(&mut res[2]);
+                rb.to_reg().write_into_byte_lower(&mut res[2]);
+            }
+            Verb::Add(op1, op2)
+            | Verb::Sub(op1, op2)
+            | Verb::And(op1, op2)
+            | Verb::Or(op1, op2) => match (op1, op2) {
+                (Operand::Reg(r1), Operand::Reg(r2)) => {
+                    res[0] = 0xF0;
+                    res[1] = match self {
+                        Verb::Add(..) => 0x20,
+                        Verb::Sub(..) => 0x21,
+                        Verb::And(..) => 0x22,
+                        Verb::Or(..) => 0x23,
+                        _ => unreachable!(),
+                    };
+                    r1.write_into_byte_upper(&mut res[2]);
+                    r2.write_into_byte_lower(&mut res[2]);
+                }
+                (Operand::Reg(r1), Operand::Imm(imm)) => {
+                    res[0] = match self {
+                        Verb::Add(..) => 0xA0,
+                        Verb::Sub(..) => 0xB0,
+                        Verb::And(..) => 0xC0,
+                        Verb::Or(..) => 0xD0,
+                        _ => unreachable!(),
+                    };
+                    r1.write_into_byte_lower(&mut res[0]);
+                    [res[1], res[2]] = imm.to_be_bytes();
+                }
+                _ => unreachable!(),
+            },
+
+            Verb::Not(r) => {
+                res[0] = 0xF0;
+                res[1] = 0x24;
+                r.to_reg().write_into_byte_upper(&mut res[2]);
+            }
+            Verb::Shl(op1, op2) | Verb::Shr(op1, op2) => match (op1, op2) {
+                (Operand::Reg(r1), Operand::Reg(r2)) => {
+                    res[0] = 0xF0;
+                    res[1] = match self {
+                        Verb::Shl(..) => 0x31,
+                        Verb::Shr(..) => 0x33,
+                        _ => unreachable!(),
+                    };
+                    r1.write_into_byte_upper(&mut res[2]);
+                    r2.write_into_byte_lower(&mut res[2]);
+                }
+                (Operand::Reg(r), Operand::Imm(imm)) => {
+                    res[0] = 0xF0;
+                    res[1] = match self {
+                        Verb::Shl(..) => 0x30,
+                        Verb::Shr(..) => 0x32,
+                        _ => unreachable!(),
+                    };
+                    r.write_into_byte_upper(&mut res[2]);
+                    write_imm_to_byte_lower(*imm, &mut res[2]);
+                }
+                _ => unreachable!(),
+            },
+
+            Verb::Dbg(op) => {
+                res[0] = 0xE0;
+                [res[1], res[2]] = op.to_imm().to_be_bytes();
+            }
+            Verb::DbgRegs => {
+                res[0] = 0xE1;
+            }
+            Verb::Nop => {}
+            Verb::Halt => {
+                res[0] = 0xFF;
+                res[1] = 0xFF;
+                res[2] = 0xFF;
+            }
+        }
+        res
+    }
+
+    pub fn as_hex_file_line(&self) -> String {
+        let bytes = self.to_bytes();
+
+        // format as hex, with padding to left
+        // https://doc.rust-lang.org/std/fmt/
+        format!(
+            "{:0>2X}_{:0>2X}_{:0>2X}  // {}",
+            bytes[0], bytes[1], bytes[2], self
+        )
+    }
+}
+
+pub fn write_imm_to_byte_lower(imm: u16, b: &mut u8) {
+    *b &= 0xF0;
+    *b |= imm.to_be_bytes()[1] & 0x0F;
 }
