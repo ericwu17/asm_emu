@@ -5,16 +5,10 @@ use crate::{
     source_cursor::SourceCodeCursor,
 };
 
-pub fn get_tokens(source_code_contents: String) -> (Vec<Verb>, HashMap<String, u16>) {
-    // we return Vec<Vec<Token>> to indicate a list of lines in the source_code,
-    // where each line has multiple tokens.
-    // The reason for keeping at a line granularity is I want a 1-to-1 correspondence between source
-    // code lines and instructions. This way the nth line of assembly code
-    // will always get placed in address (n-1). (source code lines start at 1 while memory addresses start at 0)
-    // we can generate no-op instructions to pad empty lines.
-
-    // comments start with a ';' and labels start with a '.'
-
+pub fn get_tokens(
+    source_code_contents: String,
+    var_loc_map: &HashMap<String, u16>,
+) -> (Vec<Verb>, HashMap<String, u16>) {
     let mut cursor = SourceCodeCursor::new(source_code_contents);
 
     let mut label_map = HashMap::new();
@@ -22,9 +16,7 @@ pub fn get_tokens(source_code_contents: String) -> (Vec<Verb>, HashMap<String, u
     let mut verbs = Vec::new();
 
     while cursor.peek().is_some() {
-        // this loop will consume lines;
-
-        let curr_num_verbs = verbs.len();
+        // this loop will consume one line per iteration:
 
         // consume leading whitespace
         consume_whitespace(&mut cursor);
@@ -33,7 +25,6 @@ pub fn get_tokens(source_code_contents: String) -> (Vec<Verb>, HashMap<String, u
             Some('\n') | Some(';') => {
                 // empty line. Consume the empty line.
                 consume_rest_of_line(&mut cursor);
-                verbs.push(Verb::Nop);
             }
             Some('.') => {
                 // parse label
@@ -46,25 +37,21 @@ pub fn get_tokens(source_code_contents: String) -> (Vec<Verb>, HashMap<String, u
                 consume_rest_of_line(&mut cursor);
 
                 label_map.insert(label_name, verbs.len() as u16);
-                verbs.push(Verb::Nop);
                 continue;
             }
 
             _ => {
-                let verb = parse_verb(&mut cursor);
+                let verb = parse_verb(&mut cursor, var_loc_map);
 
                 verbs.push(verb);
             }
         }
-
-        // on every loop, we should be adding exactly one verb.
-        assert!(verbs.len() == curr_num_verbs + 1);
     }
 
     return (verbs, label_map);
 }
 
-fn consume_rest_of_line(cursor: &mut SourceCodeCursor) {
+pub fn consume_rest_of_line(cursor: &mut SourceCodeCursor) {
     while cursor.peek() != Some('\n') && cursor.peek() != None {
         cursor.next();
     }
@@ -72,13 +59,13 @@ fn consume_rest_of_line(cursor: &mut SourceCodeCursor) {
     cursor.next();
 }
 
-fn consume_whitespace(cursor: &mut SourceCodeCursor) {
+pub fn consume_whitespace(cursor: &mut SourceCodeCursor) {
     while cursor.peek() == Some(' ') || cursor.peek() == Some('\t') {
         cursor.next();
     }
 }
 
-fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
+fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>) -> Verb {
     let mut verb_name: String = String::new();
 
     consume_whitespace(cursor);
@@ -88,8 +75,8 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
 
     match verb_name.as_str() {
         "mov" => {
-            let operand_1 = parse_operand(cursor);
-            let operand_2 = parse_operand(cursor);
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
 
             match (operand_1, operand_2) {
@@ -107,7 +94,7 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
         }
 
         "jmp" => {
-            let operand = parse_operand(cursor);
+            let operand = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match operand {
                 Some(o1) => match &o1 {
@@ -118,8 +105,8 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
             }
         }
         "jz" | "jnz" | "jpos" | "jposz" | "jneg" | "jnegz" => {
-            let operand_1 = parse_operand(cursor);
-            let operand_2 = parse_operand(cursor);
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match (operand_1, operand_2) {
                 (Some(o1), Some(o2)) => match (&o1, &o2) {
@@ -141,8 +128,8 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
         }
 
         "setz" | "setnz" | "setpos" | "setposz" | "setneg" | "setnegz" => {
-            let operand_1 = parse_operand(cursor);
-            let operand_2 = parse_operand(cursor);
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match (operand_1, operand_2) {
                 (Some(o1), Some(o2)) => match (&o1, &o2) {
@@ -162,8 +149,8 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
         }
 
         "add" | "sub" | "and" | "or" | "shl" | "shr" => {
-            let operand_1 = parse_operand(cursor);
-            let operand_2 = parse_operand(cursor);
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match (operand_1, operand_2) {
                 (Some(o1), Some(o2)) => match (&o1, &o2) {
@@ -185,7 +172,7 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
         }
 
         "not" => {
-            let operand = parse_operand(cursor);
+            let operand = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match operand {
                 Some(Operand::Reg(_)) => return Verb::Not(operand.unwrap()),
@@ -194,7 +181,7 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
         }
 
         "dbg" => {
-            let optional_operand = parse_operand(cursor);
+            let optional_operand = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
             match optional_operand {
                 None => return Verb::DbgRegs,
@@ -218,7 +205,10 @@ fn parse_verb(cursor: &mut SourceCodeCursor) -> Verb {
     }
 }
 
-fn parse_operand(cursor: &mut SourceCodeCursor) -> Option<Operand> {
+fn parse_operand(
+    cursor: &mut SourceCodeCursor,
+    var_loc_map: &HashMap<String, u16>,
+) -> Option<Operand> {
     consume_whitespace(cursor);
 
     if cursor.peek() == None || cursor.peek() == Some('\n') {
@@ -230,7 +220,7 @@ fn parse_operand(cursor: &mut SourceCodeCursor) -> Option<Operand> {
         operand_str.push(cursor.next().unwrap());
     }
 
-    if let Some(val) = convert_str_to_imm(&operand_str) {
+    if let Some(val) = convert_str_to_imm(&operand_str, var_loc_map) {
         return Some(Operand::Imm(val));
     }
 
@@ -247,7 +237,7 @@ fn parse_operand(cursor: &mut SourceCodeCursor) -> Option<Operand> {
             .skip(1)
             .take(operand_str.len() - 2)
             .collect();
-        if let Some(val) = convert_str_to_imm(&inner_string) {
+        if let Some(val) = convert_str_to_imm(&inner_string, var_loc_map) {
             return Some(Operand::MemAtImm(val));
         }
         match convert_str_to_reg(&inner_string) {
@@ -268,28 +258,32 @@ fn parse_operand(cursor: &mut SourceCodeCursor) -> Option<Operand> {
 
 fn convert_str_to_reg(s: &str) -> Option<Reg> {
     match s {
-        "R0" => Some(Reg::R0),
-        "R1" => Some(Reg::R1),
-        "R2" => Some(Reg::R2),
-        "R3" => Some(Reg::R3),
-        "R4" => Some(Reg::R4),
-        "R5" => Some(Reg::R5),
-        "R6" => Some(Reg::R6),
-        "R7" => Some(Reg::R7),
+        "R0" | "r0" => Some(Reg::R0),
+        "R1" | "r1" => Some(Reg::R1),
+        "R2" | "r2" => Some(Reg::R2),
+        "R3" | "r3" => Some(Reg::R3),
+        "R4" | "r4" => Some(Reg::R4),
+        "R5" | "r5" => Some(Reg::R5),
+        "R6" | "r6" => Some(Reg::R6),
+        "R7" | "r7" => Some(Reg::R7),
 
-        "R8" => Some(Reg::R8),
-        "R9" => Some(Reg::R9),
-        "R10" => Some(Reg::R10),
-        "R11" => Some(Reg::R11),
-        "R12" => Some(Reg::R12),
-        "R13" => Some(Reg::R13),
-        "R14" => Some(Reg::R14),
-        "R15" => Some(Reg::R15),
+        "R8" | "r8" => Some(Reg::R8),
+        "R9" | "r9" => Some(Reg::R9),
+        "R10" | "r10" => Some(Reg::R10),
+        "R11" | "r11" => Some(Reg::R11),
+        "R12" | "r12" => Some(Reg::R12),
+        "R13" | "r13" => Some(Reg::R13),
+        "R14" | "r14" => Some(Reg::R14),
+        "R15" | "r15" => Some(Reg::R15),
         _ => None,
     }
 }
 
-fn convert_str_to_imm(s: &str) -> Option<u16> {
+pub fn convert_str_to_imm(s: &str, var_loc_map: &HashMap<String, u16>) -> Option<u16> {
+    if let Some(val) = var_loc_map.get(s) {
+        return Some(*val);
+    }
+
     let parse_res = if s.starts_with("0x") {
         u64::from_str_radix(&s[2..], 16)
     } else {

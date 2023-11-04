@@ -1,6 +1,7 @@
 mod emu;
 mod instr_repr;
 mod label_resolver;
+mod location_resolver;
 mod source_cursor;
 mod tokens;
 
@@ -11,6 +12,7 @@ use clap::Parser;
 use tokens::get_tokens;
 
 use crate::label_resolver::resolve_labels;
+use crate::location_resolver::create_location_map;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,7 +33,9 @@ fn main() {
         .read_to_string(&mut contents)
         .expect(&format!("error reading file: {}", &input_filepath));
 
-    let (mut verbs, map) = get_tokens(contents);
+    let var_loc_map = create_location_map("vars.locations");
+
+    let (mut verbs, map) = get_tokens(contents, &var_loc_map);
 
     resolve_labels(&mut verbs, &map);
 
