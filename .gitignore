@@ -1,4 +1,6 @@
 /target
+.vscode
+
 code.asm
 vars.locations
 seq.code

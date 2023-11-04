@@ -3,6 +3,7 @@ use crate::instr_repr::{Operand, Verb};
 pub struct CpuEmu {
     instrs: Vec<Verb>,
     ip: u16,
+    halted: bool,
     regs: [i16; 16],
     mem: [i16; 65536],
 }
@@ -12,14 +13,35 @@ impl CpuEmu {
         CpuEmu {
             instrs,
             ip: 0,
-            regs: [-258; 16],
-            mem: [-258; 65536], // we use -258 to make it easier to spot errors of uninitialized memory
+            halted: false,
+            regs: [-2; 16],
+            mem: [-2; 65536], // we use -2 to make it easier to spot errors of uninitialized memory
         }
     }
 
-    pub fn run(&mut self) {
-        loop {
-            let next_instr = self.instrs.get(self.ip as usize).unwrap();
+    pub fn get_gfx_buffer(&self) -> &[i16] {
+        return &self.mem.as_slice()[0..1200];
+    }
+
+    pub fn get_led_output(&self) -> i16 {
+        return self.mem[1204];
+    }
+
+    pub fn set_switch_states(&mut self, new_states: i16) {
+        self.mem[1200] = new_states;
+    }
+
+    pub fn set_button_states(&mut self, new_states: i16) {
+        self.mem[1201] = new_states;
+    }
+
+    pub fn run_some_instructions(&mut self) {
+        // runs 1000 instructions
+        for _ in 0..1000 {
+            let next_instr = self
+                .instrs
+                .get(self.ip as usize)
+                .expect("program execution continued into undefined instructions!");
             match next_instr {
                 Verb::Mov(op1, op2) => match (op1, op2) {
                     (Operand::Reg(reg), Operand::Imm(imm)) => {
@@ -94,17 +116,25 @@ impl CpuEmu {
                 Verb::Add(op1, op2) => {
                     let ra = op1.to_reg();
                     if let Operand::Reg(rb) = op2 {
-                        self.regs[ra.to_id() as usize] += self.regs[rb.to_id() as usize];
+                        self.regs[ra.to_id() as usize] = self.regs[ra.to_id() as usize]
+                            .overflowing_add(self.regs[rb.to_id() as usize])
+                            .0;
                     } else {
-                        self.regs[ra.to_id() as usize] += op2.to_imm() as i16;
+                        self.regs[ra.to_id() as usize] = self.regs[ra.to_id() as usize]
+                            .overflowing_add(op2.to_imm() as i16)
+                            .0;
                     }
                 }
                 Verb::Sub(op1, op2) => {
                     let ra = op1.to_reg();
                     if let Operand::Reg(rb) = op2 {
-                        self.regs[ra.to_id() as usize] -= self.regs[rb.to_id() as usize];
+                        self.regs[ra.to_id() as usize] = self.regs[ra.to_id() as usize]
+                            .overflowing_sub(self.regs[rb.to_id() as usize])
+                            .0;
                     } else {
-                        self.regs[ra.to_id() as usize] -= op2.to_imm() as i16;
+                        self.regs[ra.to_id() as usize] = self.regs[ra.to_id() as usize]
+                            .overflowing_sub(op2.to_imm() as i16)
+                            .0;
                     }
                 }
                 Verb::And(op1, op2) => {
@@ -169,7 +199,10 @@ impl CpuEmu {
                 }
                 Verb::Nop => {}
                 Verb::Halt => {
-                    println!("program halting.");
+                    if !self.halted {
+                        self.halted = true;
+                        println!("program halting.");
+                    }
                     return;
                 }
             }
