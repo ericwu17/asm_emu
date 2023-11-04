@@ -22,6 +22,10 @@ pub fn create_location_map(file: &str) -> HashMap<String, u16> {
         while cursor.peek().is_some() && !cursor.peek().unwrap().is_ascii_whitespace() {
             var_name.push(cursor.next().unwrap());
         }
+        if var_name == "" {
+            consume_rest_of_line(&mut cursor);
+            continue;
+        }
         consume_whitespace(&mut cursor);
 
         let mut operand_str: String = String::new();

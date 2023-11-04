@@ -13,7 +13,12 @@ pub fn resolve_labels(instrs: &mut Vec<Verb>, label_map: &HashMap<String, u16>) 
             | Verb::Jneg(operand, _)
             | Verb::Jnegz(operand, _) => {
                 if let Operand::Label(s) = operand {
-                    *operand = Operand::Imm(*label_map.get(s).unwrap());
+                    let optional_addr = label_map.get(s);
+                    if let Some(addr) = optional_addr {
+                        *operand = Operand::Imm(*addr);
+                    } else {
+                        panic!("unresolved label: {}", s);
+                    }
                 }
             }
 
