@@ -58,10 +58,10 @@ impl CpuEmu {
                     }
                     (Operand::Reg(reg1), Operand::MemAtReg(reg2)) => {
                         self.regs[reg1.to_id() as usize] =
-                            self.mem[self.regs[reg2.to_id() as usize] as usize];
+                            self.mem[self.regs[reg2.to_id() as usize] as u16 as usize];
                     }
                     (Operand::MemAtReg(reg1), Operand::Reg(reg2)) => {
-                        self.mem[self.regs[reg1.to_id() as usize] as usize] =
+                        self.mem[self.regs[reg1.to_id() as usize] as u16 as usize] =
                             self.regs[reg2.to_id() as usize];
                     }
                     _ => unreachable!(),
