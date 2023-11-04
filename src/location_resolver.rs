@@ -18,13 +18,20 @@ pub fn create_location_map(file: &str) -> HashMap<String, u16> {
     while cursor.peek().is_some() {
         consume_whitespace(&mut cursor);
 
+        if cursor.peek().is_none() {
+            break;
+        }
+        if cursor.peek() == Some('\n') || cursor.peek() == Some(';') {
+            consume_rest_of_line(&mut cursor);
+            continue;
+        }
+
         let mut var_name = String::new();
         while cursor.peek().is_some() && !cursor.peek().unwrap().is_ascii_whitespace() {
             var_name.push(cursor.next().unwrap());
         }
         if var_name == "" {
-            consume_rest_of_line(&mut cursor);
-            continue;
+            panic!("should not have empty variable name!")
         }
         consume_whitespace(&mut cursor);
 

@@ -182,7 +182,7 @@ impl CpuEmu {
                             let addr2 = op2.to_imm();
                             println!("==========");
                             println!("IP: {}", self.ip);
-                            println!("memory from {} to {}:", addr1, addr2);
+                            println!("memory from 0x{:X} to 0x{:X}:", addr1, addr2);
                             for i in addr1..=addr2 {
                                 println!("{}", self.mem[i as usize]);
                             }
@@ -204,6 +204,47 @@ impl CpuEmu {
                         println!("program halting.");
                     }
                     return;
+                }
+                Verb::Call(imm) => {
+                    // store current IP value
+                    let rsp = self.regs[0] as u16 as usize;
+                    self.mem[rsp] = self.ip as i16;
+                    // increment rsp
+                    self.regs[0] = self.regs[0].overflowing_add(1).0;
+
+                    // jump to new address minus one (because IP gets incremented at end of each cycle)
+                    self.ip = imm.to_imm().overflowing_sub(1).0;
+                }
+                Verb::Ret => {
+                    // decrement rsp
+                    self.regs[0] = self.regs[0].overflowing_sub(1).0;
+                    // read address to return to
+                    let rsp = self.regs[0] as u16 as usize;
+                    // jump there, let execution continue (so we jump to ret addr and not (ret addr) - 1)
+                    self.ip = self.mem[rsp] as u16;
+                }
+                Verb::Push(reg) => {
+                    // store reg to [rsp]
+                    let rsp = self.regs[0] as u16 as usize;
+                    self.mem[rsp] = self.regs[reg.to_reg().to_id() as usize];
+                    // increment rsp
+                    self.regs[0] = self.regs[0].overflowing_add(1).0;
+                }
+                Verb::Pop(reg) => {
+                    // decrement rsp
+                    self.regs[0] = self.regs[0].overflowing_sub(1).0;
+
+                    // load reg from [rsp]
+                    let rsp = self.regs[0] as u16 as usize;
+                    self.regs[reg.to_reg().to_id() as usize] = self.mem[rsp];
+                }
+                Verb::Ldstk(reg, imm) => {
+                    let loc = (self.regs[0] as u16).overflowing_sub(imm.to_imm() as u16).0 as usize;
+                    self.regs[reg.to_reg().to_id() as usize] = self.mem[loc];
+                }
+                Verb::Ststk(reg, imm) => {
+                    let loc = (self.regs[0] as u16).overflowing_sub(imm.to_imm() as u16).0 as usize;
+                    self.mem[loc] = self.regs[reg.to_reg().to_id() as usize];
                 }
             }
             self.ip = self.ip.overflowing_add(1).0;

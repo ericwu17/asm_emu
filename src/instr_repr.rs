@@ -27,6 +27,13 @@ pub enum Verb {
     Shl(Operand, Operand),
     Shr(Operand, Operand),
 
+    Call(Operand),
+    Ret,
+    Push(Operand),
+    Pop(Operand),
+    Ldstk(Operand, Operand),
+    Ststk(Operand, Operand),
+
     Dbg(Operand),
     DbgRegs,
     Nop,
@@ -157,6 +164,13 @@ impl fmt::Display for Verb {
             Verb::DbgRegs => write!(f, "dbg"),
             Verb::Nop => write!(f, "nop"),
             Verb::Halt => write!(f, "halt"),
+
+            Verb::Call(o1) => write!(f, "call {}", o1),
+            Verb::Ret => write!(f, "ret"),
+            Verb::Push(o1) => write!(f, "push {}", o1),
+            Verb::Pop(o1) => write!(f, "pop {}", o1),
+            Verb::Ldstk(o1, o2) => write!(f, "ldstk {} {}", o1, o2),
+            Verb::Ststk(o1, o2) => write!(f, "ststk {} {}", o1, o2),
         }
     }
 }
@@ -311,11 +325,46 @@ impl Verb {
             Verb::DbgRegs => {
                 res[0] = 0xE1;
             }
-            Verb::Nop => {}
+            Verb::Nop => {
+                res[0] = 0x00;
+                res[1] = 0x00;
+                res[2] = 0x00;
+            }
             Verb::Halt => {
                 res[0] = 0xFF;
                 res[1] = 0xFF;
                 res[2] = 0xFF;
+            }
+            Verb::Call(op) => {
+                res[0] = 0xE4;
+                [res[1], res[2]] = op.to_imm().to_be_bytes();
+            }
+            Verb::Ret => {
+                res[0] = 0xFF;
+                res[1] = 0xFF;
+                res[2] = 0xF0;
+            }
+            Verb::Push(op) => {
+                res[0] = 0xF0;
+                res[1] = 0x40;
+                op.to_reg().write_into_byte_upper(&mut res[2]);
+            }
+            Verb::Pop(op) => {
+                res[0] = 0xF0;
+                res[1] = 0x41;
+                op.to_reg().write_into_byte_upper(&mut res[2]);
+            }
+            Verb::Ldstk(op1, op2) => {
+                res[0] = 0xF0;
+                res[1] = 0x50;
+                op1.to_reg().write_into_byte_lower(&mut res[1]);
+                res[2] = op2.to_imm().to_be_bytes()[1];
+            }
+            Verb::Ststk(op1, op2) => {
+                res[0] = 0xF0;
+                res[1] = 0x60;
+                op1.to_reg().write_into_byte_lower(&mut res[1]);
+                res[2] = op2.to_imm().to_be_bytes()[1];
             }
         }
         res

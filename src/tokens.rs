@@ -201,6 +201,64 @@ fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>)
             return Verb::Halt;
         }
 
+        "call" => {
+            let operand = parse_operand(cursor, var_loc_map);
+            consume_rest_of_line(cursor);
+            match operand {
+                Some(o1) => match &o1 {
+                    Operand::Imm(_) | Operand::Label(_) => return Verb::Call(o1),
+                    _ => panic!("invalid operands for call"),
+                },
+                _ => panic!("not enough operands for call"),
+            }
+        }
+        "ret" => {
+            consume_rest_of_line(cursor);
+            return Verb::Ret;
+        }
+
+        "push" => {
+            let operand = parse_operand(cursor, var_loc_map);
+            consume_rest_of_line(cursor);
+            match operand {
+                Some(Operand::Reg(_)) => return Verb::Push(operand.unwrap()),
+                _ => panic!("invalid operand for not"),
+            }
+        }
+        "pop" => {
+            let operand = parse_operand(cursor, var_loc_map);
+            consume_rest_of_line(cursor);
+            match operand {
+                Some(Operand::Reg(_)) => return Verb::Pop(operand.unwrap()),
+                _ => panic!("invalid operand for not"),
+            }
+        }
+
+        "ldstk" => {
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
+            consume_rest_of_line(cursor);
+            match (operand_1, operand_2) {
+                (Some(o1), Some(o2)) => match (&o1, &o2) {
+                    (Operand::Reg(_), Operand::Imm(_)) => return Verb::Ldstk(o1, o2),
+                    _ => panic!("invalid operands for ldstk"),
+                },
+                _ => panic!("not enough operands for ldstk"),
+            }
+        }
+        "ststk" => {
+            let operand_1 = parse_operand(cursor, var_loc_map);
+            let operand_2 = parse_operand(cursor, var_loc_map);
+            consume_rest_of_line(cursor);
+            match (operand_1, operand_2) {
+                (Some(o1), Some(o2)) => match (&o1, &o2) {
+                    (Operand::Reg(_), Operand::Imm(_)) => return Verb::Ststk(o1, o2),
+                    _ => panic!("invalid operands for ststk"),
+                },
+                _ => panic!("not enough operands for ststk"),
+            }
+        }
+
         _ => panic!("unrecognized verb: {}", verb_name),
     }
 }
