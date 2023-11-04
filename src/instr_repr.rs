@@ -79,7 +79,7 @@ impl Operand {
 }
 
 impl Reg {
-    fn to_id(&self) -> u8 {
+    pub fn to_id(&self) -> u8 {
         match self {
             Reg::R0 => 0,
             Reg::R1 => 1,

@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 
 use clap::Parser;
+use emu::CpuEmu;
 use tokens::get_tokens;
 
 use crate::label_resolver::resolve_labels;
@@ -39,8 +40,10 @@ fn main() {
 
     resolve_labels(&mut verbs, &map);
 
-    for verb in verbs {
+    for verb in &verbs {
         println!("{}", verb.as_hex_file_line());
     }
-    dbg!(&map);
+
+    let mut cpu_emulator = CpuEmu::new(verbs);
+    cpu_emulator.run();
 }
