@@ -17,6 +17,7 @@ mov r14 0  ; next player to move (player 0 goes first, player 1 goes next)
   
   call .clear_screen
   call .draw_screen
+  call .draw_grid_dots
 
   call .wait_for_any_btns_down
 
@@ -50,7 +51,7 @@ jmp .main_loop_begin
     sub r3 VGA_END_ADDR
     add r2 1
   jnz .begin_clr_screen_loop r3
-  ret
+ret
 
 .handle_btn_press
   mov r1 [PUSH_BTNS_ADDR]
@@ -209,38 +210,69 @@ ret
     mov r6 r5
     sub r6 0x01
     jnz .draw_column_priv_1 r6
-      mov r1 0xFFFF
       
+      ; DRAW PLAYER 1 DISK
+      mov r1 0x0000
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x07E0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0FF0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x1FF8
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x3FFC
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x7FFE
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x3FFC
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x1FF8
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0FF0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x07E0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0000
       mov [r3] r1
       sub r3 0x0A
       
@@ -250,38 +282,68 @@ ret
     sub r6 0x02
     jnz .draw_column_priv_2 r6
       
-      mov r1 0x5555
-      
+      ; DRAW PLAYER 2 DISK
+      mov r1 0x0000
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0540
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0AA0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x1550
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x2AA8
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x5554
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x2AAA
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x5554
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x2AAA
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x5554
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x2AAA
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x1554
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0AA8
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0550
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x02A0
       mov [r3] r1
       sub r3 0x0A
+
+      mov r1 0x0000
       mov [r3] r1
       sub r3 0x0A
       
@@ -294,3 +356,107 @@ ret
     shr r2 2 ; shift the column down
     jmp .draw_column_begin_loop
   ret
+
+.draw_grid_dots
+  mov r1 VGA_END_ADDR
+  add r1 1
+  
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+  sub r1 10
+  push r1
+  call .draw_row_dots
+  pop r1
+  sub r1 150
+  push r1
+  call .draw_row_dots
+  pop r1
+
+ret
+
+.draw_row_dots
+  ; parameter: r1 contains the start vga memory address
+  
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  mov r3 [r1]
+  or r3 0x8001
+  mov [r1] r3
+  add r1 1
+
+  
+
+  
+
+ret
