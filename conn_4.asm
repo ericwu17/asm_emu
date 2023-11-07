@@ -68,6 +68,9 @@ ret
     call .handle_middle_btn
     ret
   .handle_btn_press_priv_3
+  dbg COLUMN_0_ADDR
+  dbg COLUMN_6_ADDR
+
   ret
 
 .handle_middle_btn
@@ -105,6 +108,10 @@ ret
 
   or r2 r5
   mov [r1] r2
+
+  push r4
+  call .check_hor_win
+  pop r4
 
   ; toggle next player
   jz .handle_middle_btn_priv_2 r14
@@ -200,6 +207,34 @@ ret
   add r1 0x0A
   mov [r1] r2
 ret
+
+
+.draw_blank
+  ; parameters: column (r1) and row (r2)
+  mov r3 VGA_END_ADDR
+  sub r3 9 
+  add r3 r1
+
+  ; multiply r2 by 160
+  mov r4 r2
+  shl r2 7
+  shl r4 5
+  add r2 r4
+  
+  sub r3 r2 
+  sub r3 0x0a ;r3 now points to where we want to draw
+
+  mov r1 0x0000
+  mov r2 r3
+  sub r2 140 ; final offset
+
+  .draw_blank_loop_begin
+    mov [r3] r1
+    sub r3 0x0A
+    mov r4 r3
+    sub r4 r2
+  jnz .draw_blank_loop_begin r4
+  ret
 
 
 .draw_player_0_disc
@@ -459,3 +494,149 @@ ret
   mov [r1] r3
   add r1 1
 ret
+
+
+.check_hor_win
+  mov r1 COLUMN_0_ADDR ; column offset, will range from COLUMN_0_ADDR to COLUMN_0_ADDR+3 (inclusive)
+
+  .chk_hor_win_begin_outer_loop
+
+    mov r7 0 ; row offset, will range from 0 to 6
+
+    mov r6 r1
+    mov r2 [r6]
+    add r6 1
+    mov r3 [r6]
+    add r6 1
+    mov r4 [r6]
+    add r6 1
+    mov r5 [r6]
+
+    .chk_hor_win_begin_inner_loop
+      
+      mov r8 r2
+      mov r9 r3
+      mov r10 r4
+      mov r11 r5
+
+      
+      and r8 r9
+      and r8 r10
+      and r8 r11
+      and r8 0x03
+      
+
+      jnz .chk_hor_win_affirmative r8
+      jmp .chk_hor_win_negative
+      .chk_hor_win_affirmative
+        mov [WIN_Y_1] r7
+        mov [WIN_Y_2] r7
+        mov [WIN_Y_3] r7
+        mov [WIN_Y_4] r7
+        sub r1 COLUMN_0_ADDR
+        mov [WIN_X_1] r1
+        add r1 1
+        mov [WIN_X_2] r1
+        add r1 1
+        mov [WIN_X_3] r1
+        add r1 1
+        mov [WIN_X_4] r1
+        mov r1 r8  ; r1 is input which contains which player is winner
+        call .highlight_win
+      .chk_hor_win_negative
+      
+      add r7 1
+      shr r2 2
+      shr r3 2
+      shr r4 2
+      shr r5 2
+
+      mov r8 r7
+      sub r8 7
+    jnz .chk_hor_win_begin_inner_loop r8
+    
+
+
+    add r1 1
+    mov r2 r1
+    sub r2 COLUMN_4_ADDR
+  jnz .chk_hor_win_begin_outer_loop r2
+
+ret
+
+.highlight_win
+  ; parameter: which player has won in r1 (0x01 for player 0 and 0x03 for player 2)
+  and r1 0x02
+  jnz .highlight_win_player_1 r1
+.highlight_win_player_0
+  mov r1 [WIN_X_1]
+  mov r2 [WIN_Y_1]
+  call .draw_player_0_disc
+  mov r1 [WIN_X_2]
+  mov r2 [WIN_Y_2]
+  call .draw_player_0_disc
+  mov r1 [WIN_X_3]
+  mov r2 [WIN_Y_3]
+  call .draw_player_0_disc
+  mov r1 [WIN_X_4]
+  mov r2 [WIN_Y_4]
+  call .draw_player_0_disc
+
+  call .busy_wait
+
+  mov r1 [WIN_X_1]
+  mov r2 [WIN_Y_1]
+  call .draw_blank
+  mov r1 [WIN_X_2]
+  mov r2 [WIN_Y_2]
+  call .draw_blank
+  mov r1 [WIN_X_3]
+  mov r2 [WIN_Y_3]
+  call .draw_blank
+  mov r1 [WIN_X_4]
+  mov r2 [WIN_Y_4]
+  call .draw_blank
+
+  call .busy_wait
+jmp .highlight_win_player_0
+
+.highlight_win_player_1
+  mov r1 [WIN_X_1]
+  mov r2 [WIN_Y_1]
+  call .draw_player_1_disc
+  mov r1 [WIN_X_2]
+  mov r2 [WIN_Y_2]
+  call .draw_player_1_disc
+  mov r1 [WIN_X_3]
+  mov r2 [WIN_Y_3]
+  call .draw_player_1_disc
+  mov r1 [WIN_X_4]
+  mov r2 [WIN_Y_4]
+  call .draw_player_1_disc
+
+  call .busy_wait
+
+  mov r1 [WIN_X_1]
+  mov r2 [WIN_Y_1]
+  call .draw_blank
+  mov r1 [WIN_X_2]
+  mov r2 [WIN_Y_2]
+  call .draw_blank
+  mov r1 [WIN_X_3]
+  mov r2 [WIN_Y_3]
+  call .draw_blank
+  mov r1 [WIN_X_4]
+  mov r2 [WIN_Y_4]
+  call .draw_blank
+
+  call .busy_wait
+jmp .highlight_win_player_1
+
+.busy_wait
+  mov r1 0
+  .busy_wait_loop
+    add r1 1
+    mov r2 r1
+    sub r2 0x500
+  jnz .busy_wait_loop r2
+  ret

@@ -121,9 +121,9 @@ fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>)
                             _ => unreachable!(),
                         }
                     }
-                    _ => panic!("invalid operands for jz"),
+                    _ => panic!("invalid operands for conditional jump"),
                 },
-                _ => panic!("not enough operands for jz"),
+                _ => panic!("not enough operands for conditional jump"),
             }
         }
 
