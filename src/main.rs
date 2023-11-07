@@ -8,6 +8,7 @@ mod tokens;
 
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
 
 use clap::Parser;
 use emu::CpuEmu;
@@ -25,7 +26,7 @@ struct Cli {
     filename: String,
 }
 
-// const OUT_FILE_NAME: &str = "seq.code";
+const CODE_FILE_NAME: &str = "seq.code";
 
 #[macroquad::main("Assembler Emulator")]
 async fn main() {
@@ -44,9 +45,20 @@ async fn main() {
 
     resolve_labels(&mut verbs, &map);
 
+    let mut f = File::create(CODE_FILE_NAME).expect("error creating output file.");
+
     for verb in &verbs {
-        println!("{}", verb.as_hex_file_line());
+        f.write(verb.as_hex_file_line().as_bytes())
+            .expect("error writing to output file");
+        f.write("\n".as_bytes())
+            .expect("error writing to output file");
     }
+    println!(
+        "Wrote output to file {}. {} instruction words ({} bits)",
+        CODE_FILE_NAME,
+        verbs.len(),
+        verbs.len() * 24
+    );
 
     let mut cpu_emulator = CpuEmu::new(verbs);
     let mut curr_switch_states = 0i16;
