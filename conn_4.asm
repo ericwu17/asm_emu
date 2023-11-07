@@ -111,6 +111,7 @@ ret
 
   push r4
   call .check_hor_win
+  call .check_vert_win
   pop r4
 
   ; toggle next player
@@ -563,6 +564,72 @@ ret
   jnz .chk_hor_win_begin_outer_loop r2
 
 ret
+
+.check_vert_win
+  mov r1 COLUMN_0_ADDR ; column offset, will range from COLUMN_0_ADDR to COLUMN_0_ADDR+6 (inclusive)
+
+  .chk_vert_win_begin_outer_loop
+    mov r2 [r1]
+    mov r3 r2
+    mov r4 r2
+    mov r5 r2
+    shr r3 2
+    shr r4 4
+    shr r5 6
+
+    mov r7 0 ; row offset, will range from 0 to 2 (inclusive)
+    .chk_vert_win_begin_inner_loop
+      mov r8 r2
+      mov r9 r3
+      mov r10 r4
+      mov r11 r5
+
+      
+      and r8 r9
+      and r8 r10
+      and r8 r11
+      and r8 0x03
+      
+
+      jnz .chk_vert_win_affirmative r8
+      jmp .chk_vert_win_negative
+      .chk_vert_win_affirmative
+        sub r1 COLUMN_0_ADDR
+        mov [WIN_X_1] r1
+        mov [WIN_X_2] r1
+        mov [WIN_X_3] r1
+        mov [WIN_X_4] r1
+        
+        mov [WIN_Y_1] r7
+        add r7 1
+        mov [WIN_Y_2] r7
+        add r7 1
+        mov [WIN_Y_3] r7
+        add r7 1
+        mov [WIN_Y_4] r7
+        mov r1 r8  ; r1 is input which contains which player is winner
+        call .highlight_win
+      .chk_vert_win_negative
+
+
+      add r7 1
+      shr r2 2
+      shr r3 2
+      shr r4 2
+      shr r5 2
+      mov r8 r7
+      sub r8 3
+    jnz .chk_vert_win_begin_inner_loop r8
+
+
+    add r1 1
+    mov r2 r1
+    sub r2 COLUMN_6_ADDR
+    sub r2 1
+  jnz .chk_vert_win_begin_outer_loop r2
+
+ret
+
 
 .highlight_win
   ; parameter: which player has won in r1 (0x01 for player 0 and 0x03 for player 2)
