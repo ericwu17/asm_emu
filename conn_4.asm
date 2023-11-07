@@ -12,22 +12,18 @@ mov [COLUMN_6_ADDR] r1
 mov r15 3  ; current cursor
 mov r14 0  ; next player to move (player 0 goes first, player 1 goes next)
 
+call .clear_screen
+call .draw_grid_dots
+mov r1 3
+call .draw_cursor_at_column
+
 
 .main_loop_begin
-  
-  call .clear_screen
-  call .draw_screen
-  call .draw_grid_dots
-
   call .wait_for_any_btns_down
-
   call .handle_btn_press
-
-  
-
   call .wait_for_all_btns_up
+  
   mov [LED_ADDR] r15
-
 jmp .main_loop_begin
 
 
@@ -74,21 +70,12 @@ ret
   .handle_btn_press_priv_3
   ret
 
-.handle_right_btn
-  mov r1 r15
-  sub r1 6
-  jz .handle_right_btn_priv_1 r1
-  add r15 1
-  ret
-.handle_right_btn_priv_1
-  mov r15 0
-  ret
-
 .handle_middle_btn
   mov r1 COLUMN_0_ADDR
   add r1 r15
   mov r2 [r1]   ; now r2 contains the encoding of the column which we want
 
+  ;; check if column is full:
   mov r3 r2
   and r3 0x0C00
   jz .handle_middle_btn_priv_1 r3
@@ -121,28 +108,53 @@ ret
 
   ; toggle next player
   jz .handle_middle_btn_priv_2 r14
+    mov r1 r15
+    mov r2 r4
+    call .draw_player_1_disc
     mov r14 0
     ret
   .handle_middle_btn_priv_2 r14
+    mov r1 r15
+    mov r2 r4
+    call .draw_player_0_disc
     mov r14 1
     ret
 
 
+.handle_right_btn
+  mov r1 r15
+  call .clear_cursor_at_column
+  mov r1 r15
+  sub r1 6
+  jz .handle_right_btn_priv_1 r1
+  add r15 1
+  mov r1 r15
+  call .draw_cursor_at_column
+  ret
+.handle_right_btn_priv_1
+  mov r15 0
+  mov r1 r15
+  call .draw_cursor_at_column
+  ret
+
 .handle_left_btn
+  mov r1 r15
+  call .clear_cursor_at_column
   jz .handle_left_btn_priv_1 r15
   sub r15 1
+  mov r1 r15
+  call .draw_cursor_at_column
   ret
 .handle_left_btn_priv_1
   mov r15 6
+  mov r1 r15
+  call .draw_cursor_at_column
   ret
 
 
-.draw_screen
-  ; DRAW CURSOR (cursor position stored in r15)
-
-  ; put the start address in r1
-  mov r1 VGA_BEGIN_ADDR
-  add r1 r15
+.draw_cursor_at_column
+  ; parameter: cursor column to draw
+  add r1 VGA_BEGIN_ADDR
   mov r2 0xFFFF
   mov [r1] r2
   add r1 0x0A
@@ -166,196 +178,188 @@ ret
   add r1 0x0A
   mov r2 0x0180
   mov [r1] r2
+ret
 
-  ; END DRAW CURSOR
-  ; DRAW BOARD
-  
-  mov r7 0 ; column counter
-  .draw_screen_start_draw_board_loop
-    mov r2 COLUMN_0_ADDR
-    add r2 r7
-    mov r3 [r2]
-    
-
-    mov r1 r7   ; parameter 1: column number
-    mov r2 r3 ; parameter 2: number representing column
-    push r7
-    call .draw_column
-    pop r7
-
-    mov r2 r7
-    sub r2 6
-    add r7 1
-  jnz .draw_screen_start_draw_board_loop r2
-
-
-
-
-  ; END DRAW BOARD
+.clear_cursor_at_column
+  ; parameter: cursor column to clear
+  add r1 VGA_BEGIN_ADDR
+  mov r2 0x00
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
+  add r1 0x0A
+  mov [r1] r2
 ret
 
 
-
-.draw_column
-  ; paramters: column number and a number representing the state of the column
-
+.draw_player_0_disc
+  ; parameters: column (r1) and row (r2)
   mov r3 VGA_END_ADDR
   sub r3 9 
-  add r3 r1    ;r3 now points to where we want to draw
+  add r3 r1
 
-  ; we continue drawing until there are no more pieces
-  .draw_column_begin_loop
-    mov r5 r2 
-    and r5 0x0003   ; r5 contains the bitwise representation of the lowest disc
-    mov r6 r5
-    sub r6 0x01
-    jnz .draw_column_priv_1 r6
-      
-      ; DRAW PLAYER 1 DISK
-      mov r1 0x0000
-      mov [r3] r1
-      sub r3 0x0A
+  ; multiply r2 by 160
+  mov r4 r2
+  shl r2 7
+  shl r4 5
+  add r2 r4
+  
+  sub r3 r2 ;r3 now points to where we want to draw
 
-      mov r1 0x07E0
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0000
+  ;mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0FF0
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x07E0
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x1FF8
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0FF0
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x3FFC
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x1FF8
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x3FFC
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x7FFE
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x3FFC
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x7FFE
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x1FF8
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x3FFC
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0FF0
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x1FF8
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x07E0
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0FF0
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0000
-      mov [r3] r1
-      sub r3 0x0A
-      
-      jmp .draw_column_cases_end
-    .draw_column_priv_1
-    mov r6 r5
-    sub r6 0x02
-    jnz .draw_column_priv_2 r6
-      
-      ; DRAW PLAYER 2 DISK
-      mov r1 0x0000
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x07E0
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0540
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0000
+  ;mov [r3] r1
+  sub r3 0x0A
+ret
 
-      mov r1 0x0AA0
-      mov [r3] r1
-      sub r3 0x0A
+.draw_player_1_disc
+  ; parameters: column (r1) and row (r2)
+  mov r3 VGA_END_ADDR
+  sub r3 9 
+  add r3 r1
 
-      mov r1 0x1550
-      mov [r3] r1
-      sub r3 0x0A
+  ; multiply r2 by 160
+  mov r4 r2
+  shl r2 7
+  shl r4 5
+  add r2 r4
+  
+  sub r3 r2 ;r3 now points to where we want to draw
 
-      mov r1 0x2AA8
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0000
+  ;mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x5554
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0540
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x2AAA
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x0AA0
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x5554
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x1550
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x2AAA
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x2AA8
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x5554
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x5554
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x2AAA
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x2AAA
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x1554
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x5554
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0AA8
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x2AAA
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0550
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x5554
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x02A0
-      mov [r3] r1
-      sub r3 0x0A
+  mov r1 0x2AAA
+  mov [r3] r1
+  sub r3 0x0A
 
-      mov r1 0x0000
-      mov [r3] r1
-      sub r3 0x0A
-      
+  mov r1 0x1554
+  mov [r3] r1
+  sub r3 0x0A
 
-      jmp .draw_column_cases_end
-    .draw_column_priv_2
-    ret ; return because we must have reached the top of the column to draw (no more players pieces)
-    .draw_column_cases_end
+  mov r1 0x0AA8
+  mov [r3] r1
+  sub r3 0x0A
 
-    shr r2 2 ; shift the column down
-    jmp .draw_column_begin_loop
-  ret
+  mov r1 0x0550
+  mov [r3] r1
+  sub r3 0x0A
+
+  mov r1 0x02A0
+  mov [r3] r1
+  sub r3 0x0A
+
+  mov r1 0x0000
+  ;mov [r3] r1
+  sub r3 0x0A
+ret
+
 
 .draw_grid_dots
   mov r1 VGA_END_ADDR
@@ -454,9 +458,4 @@ ret
   or r3 0x8001
   mov [r1] r3
   add r1 1
-
-  
-
-  
-
 ret

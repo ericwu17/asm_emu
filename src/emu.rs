@@ -36,8 +36,11 @@ impl CpuEmu {
     }
 
     pub fn run_some_instructions(&mut self) {
-        // runs 1000 instructions
-        for _ in 0..1000 {
+        // runs 416 instructions
+        // the hardware clock runs at 100Mhz, which is stepped down to 100KHz,
+        // and we execute 1 instruction every 4 clock cycles. So 25K instructions are run every second.
+        // Since the framerate of the emulator is 60 fps, 25000/60 = 416
+        for _ in 0..416 {
             let next_instr = self
                 .instrs
                 .get(self.ip as usize)
