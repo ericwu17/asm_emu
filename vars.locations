@@ -1,0 +1,28 @@
+
+VGA_BEGIN_ADDR            0x0000
+VGA_END_ADDR              0x04af
+DIP_SWITCH_ADDR           0x04b0
+PUSH_BTNS_ADDR            0x04b1
+SEGMENT_DISP_LO_ADDR      0x04b2
+SEGMENT_DISP_HI_ADDR      0x04b3
+LED_ADDR                  0x04b4
+
+; addresses between 4b4 and 4ff can be used for global variables!
+
+COLUMN_0_ADDR             0x04c0
+COLUMN_1_ADDR             0x04c1
+COLUMN_2_ADDR             0x04c2
+COLUMN_3_ADDR             0x04c3
+COLUMN_4_ADDR             0x04c4
+COLUMN_5_ADDR             0x04c5
+COLUMN_6_ADDR             0x04c6
+
+WIN_X_1                   0x04d0
+WIN_Y_1                   0x04d1
+WIN_X_2                   0x04d2
+WIN_Y_2                   0x04d3
+WIN_X_3                   0x04d4
+WIN_Y_3                   0x04d5
+WIN_X_4                   0x04d6
+WIN_Y_4                   0x04d7
+
