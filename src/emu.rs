@@ -142,9 +142,12 @@ impl CpuEmu {
                 Verb::Shr(op1, op2) => {
                     let ra = op1.to_reg();
                     if let Operand::Reg(rb) = op2 {
-                        self.regs[ra.to_id() as usize] >>= self.regs[rb.to_id() as usize];
+                        let a = self.regs[ra.to_id() as usize] as u16;
+                        self.regs[ra.to_id() as usize] =
+                            (a >> self.regs[rb.to_id() as usize]) as i16;
                     } else {
-                        self.regs[ra.to_id() as usize] >>= op2.to_imm() as i16;
+                        let a = self.regs[ra.to_id() as usize] as u16;
+                        self.regs[ra.to_id() as usize] = (a >> op2.to_imm() as i16) as i16;
                     }
                 }
                 Verb::Dbg(op1) => {
