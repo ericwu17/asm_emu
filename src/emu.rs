@@ -72,12 +72,7 @@ impl CpuEmu {
                 Verb::Jmp(imm) => {
                     self.ip = imm.to_imm().overflowing_sub(1).0;
                 }
-                Verb::Jz(imm, reg)
-                | Verb::Jnz(imm, reg)
-                | Verb::Jpos(imm, reg)
-                | Verb::Jposz(imm, reg)
-                | Verb::Jneg(imm, reg)
-                | Verb::Jnegz(imm, reg) => {
+                Verb::Jz(imm, reg) | Verb::Jnz(imm, reg) => {
                     let imm = imm.to_imm();
                     let reg = reg.to_reg();
                     let reg_value = self.regs[reg.to_id() as usize];
@@ -85,37 +80,13 @@ impl CpuEmu {
                     let jump_taken = match next_instr {
                         Verb::Jz(..) => reg_value == 0,
                         Verb::Jnz(..) => reg_value != 0,
-                        Verb::Jpos(..) => reg_value > 0,
-                        Verb::Jposz(..) => reg_value >= 0,
-                        Verb::Jneg(..) => reg_value < 0,
-                        Verb::Jnegz(..) => reg_value <= 0,
                         _ => unreachable!(),
                     };
                     if jump_taken {
                         self.ip = imm.overflowing_sub(1).0;
                     }
                 }
-                Verb::Setz(ra, rb)
-                | Verb::Setnz(ra, rb)
-                | Verb::Setpos(ra, rb)
-                | Verb::Setposz(ra, rb)
-                | Verb::Setneg(ra, rb)
-                | Verb::Setnegz(ra, rb) => {
-                    let ra = ra.to_reg();
-                    let rb = rb.to_reg();
-                    let rb_val = self.regs[rb.to_id() as usize];
 
-                    let cond_satisfied = match next_instr {
-                        Verb::Setz(..) => rb_val == 0,
-                        Verb::Setnz(..) => rb_val != 0,
-                        Verb::Setpos(..) => rb_val > 0,
-                        Verb::Setposz(..) => rb_val >= 0,
-                        Verb::Setneg(..) => rb_val < 0,
-                        Verb::Setnegz(..) => rb_val <= 0,
-                        _ => unreachable!(),
-                    };
-                    self.regs[ra.to_id() as usize] = if cond_satisfied { 1 } else { 0 };
-                }
                 Verb::Add(op1, op2) => {
                     let ra = op1.to_reg();
                     if let Operand::Reg(rb) = op2 {
@@ -225,29 +196,6 @@ impl CpuEmu {
                     let rsp = self.regs[0] as u16 as usize;
                     // jump there, let execution continue (so we jump to ret addr and not (ret addr) - 1)
                     self.ip = self.mem[rsp] as u16;
-                }
-                Verb::Push(reg) => {
-                    // store reg to [rsp]
-                    let rsp = self.regs[0] as u16 as usize;
-                    self.mem[rsp] = self.regs[reg.to_reg().to_id() as usize];
-                    // increment rsp
-                    self.regs[0] = self.regs[0].overflowing_add(1).0;
-                }
-                Verb::Pop(reg) => {
-                    // decrement rsp
-                    self.regs[0] = self.regs[0].overflowing_sub(1).0;
-
-                    // load reg from [rsp]
-                    let rsp = self.regs[0] as u16 as usize;
-                    self.regs[reg.to_reg().to_id() as usize] = self.mem[rsp];
-                }
-                Verb::Ldstk(reg, imm) => {
-                    let loc = (self.regs[0] as u16).overflowing_sub(imm.to_imm() as u16).0 as usize;
-                    self.regs[reg.to_reg().to_id() as usize] = self.mem[loc];
-                }
-                Verb::Ststk(reg, imm) => {
-                    let loc = (self.regs[0] as u16).overflowing_sub(imm.to_imm() as u16).0 as usize;
-                    self.mem[loc] = self.regs[reg.to_reg().to_id() as usize];
                 }
             }
             self.ip = self.ip.overflowing_add(1).0;

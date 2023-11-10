@@ -104,7 +104,7 @@ fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>)
                 _ => panic!("not enough operands for jmp"),
             }
         }
-        "jz" | "jnz" | "jpos" | "jposz" | "jneg" | "jnegz" => {
+        "jz" | "jnz" => {
             let operand_1 = parse_operand(cursor, var_loc_map);
             let operand_2 = parse_operand(cursor, var_loc_map);
             consume_rest_of_line(cursor);
@@ -114,37 +114,12 @@ fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>)
                         match verb_name.as_str() {
                             "jz" => return Verb::Jz(o1, o2),
                             "jnz" => return Verb::Jnz(o1, o2),
-                            "jpos" => return Verb::Jpos(o1, o2),
-                            "jposz" => return Verb::Jposz(o1, o2),
-                            "jneg" => return Verb::Jneg(o1, o2),
-                            "jnegz" => return Verb::Jnegz(o1, o2),
                             _ => unreachable!(),
                         }
                     }
                     _ => panic!("invalid operands for conditional jump"),
                 },
                 _ => panic!("not enough operands for conditional jump"),
-            }
-        }
-
-        "setz" | "setnz" | "setpos" | "setposz" | "setneg" | "setnegz" => {
-            let operand_1 = parse_operand(cursor, var_loc_map);
-            let operand_2 = parse_operand(cursor, var_loc_map);
-            consume_rest_of_line(cursor);
-            match (operand_1, operand_2) {
-                (Some(o1), Some(o2)) => match (&o1, &o2) {
-                    (Operand::Reg(_), Operand::Reg(_)) => match verb_name.as_str() {
-                        "setz" => return Verb::Setz(o1, o2),
-                        "setnz" => return Verb::Setnz(o1, o2),
-                        "setpos" => return Verb::Setpos(o1, o2),
-                        "setposz" => return Verb::Setposz(o1, o2),
-                        "setneg" => return Verb::Setneg(o1, o2),
-                        "setnegz" => return Verb::Setnegz(o1, o2),
-                        _ => unreachable!(),
-                    },
-                    _ => panic!("invalid operands for conditional set"),
-                },
-                _ => panic!("not enough operands for conditional set"),
             }
         }
 
@@ -215,48 +190,6 @@ fn parse_verb(cursor: &mut SourceCodeCursor, var_loc_map: &HashMap<String, u16>)
         "ret" => {
             consume_rest_of_line(cursor);
             return Verb::Ret;
-        }
-
-        "push" => {
-            let operand = parse_operand(cursor, var_loc_map);
-            consume_rest_of_line(cursor);
-            match operand {
-                Some(Operand::Reg(_)) => return Verb::Push(operand.unwrap()),
-                _ => panic!("invalid operand for not"),
-            }
-        }
-        "pop" => {
-            let operand = parse_operand(cursor, var_loc_map);
-            consume_rest_of_line(cursor);
-            match operand {
-                Some(Operand::Reg(_)) => return Verb::Pop(operand.unwrap()),
-                _ => panic!("invalid operand for not"),
-            }
-        }
-
-        "ldstk" => {
-            let operand_1 = parse_operand(cursor, var_loc_map);
-            let operand_2 = parse_operand(cursor, var_loc_map);
-            consume_rest_of_line(cursor);
-            match (operand_1, operand_2) {
-                (Some(o1), Some(o2)) => match (&o1, &o2) {
-                    (Operand::Reg(_), Operand::Imm(_)) => return Verb::Ldstk(o1, o2),
-                    _ => panic!("invalid operands for ldstk"),
-                },
-                _ => panic!("not enough operands for ldstk"),
-            }
-        }
-        "ststk" => {
-            let operand_1 = parse_operand(cursor, var_loc_map);
-            let operand_2 = parse_operand(cursor, var_loc_map);
-            consume_rest_of_line(cursor);
-            match (operand_1, operand_2) {
-                (Some(o1), Some(o2)) => match (&o1, &o2) {
-                    (Operand::Reg(_), Operand::Imm(_)) => return Verb::Ststk(o1, o2),
-                    _ => panic!("invalid operands for ststk"),
-                },
-                _ => panic!("not enough operands for ststk"),
-            }
         }
 
         _ => panic!("unrecognized verb: {}", verb_name),

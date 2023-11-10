@@ -7,17 +7,6 @@ pub enum Verb {
 
     Jz(Operand, Operand),
     Jnz(Operand, Operand),
-    Jpos(Operand, Operand),
-    Jposz(Operand, Operand),
-    Jneg(Operand, Operand),
-    Jnegz(Operand, Operand),
-
-    Setz(Operand, Operand),
-    Setnz(Operand, Operand),
-    Setpos(Operand, Operand),
-    Setposz(Operand, Operand),
-    Setneg(Operand, Operand),
-    Setnegz(Operand, Operand),
 
     Add(Operand, Operand),
     Sub(Operand, Operand),
@@ -29,10 +18,6 @@ pub enum Verb {
 
     Call(Operand),
     Ret,
-    Push(Operand),
-    Pop(Operand),
-    Ldstk(Operand, Operand),
-    Ststk(Operand, Operand),
 
     Dbg(Operand),
     DbgRegs,
@@ -143,16 +128,6 @@ impl fmt::Display for Verb {
             Verb::Jmp(o1) => write!(f, "jmp {} ", o1),
             Verb::Jz(o1, o2) => write!(f, "jz {} {}", o1, o2),
             Verb::Jnz(o1, o2) => write!(f, "jnz {} {}", o1, o2),
-            Verb::Jpos(o1, o2) => write!(f, "jpos {} {}", o1, o2),
-            Verb::Jposz(o1, o2) => write!(f, "jposz {} {}", o1, o2),
-            Verb::Jneg(o1, o2) => write!(f, "jneg {} {}", o1, o2),
-            Verb::Jnegz(o1, o2) => write!(f, "jnegz {} {}", o1, o2),
-            Verb::Setz(o1, o2) => write!(f, "setz {} {}", o1, o2),
-            Verb::Setnz(o1, o2) => write!(f, "setnz {} {}", o1, o2),
-            Verb::Setpos(o1, o2) => write!(f, "setpos {} {}", o1, o2),
-            Verb::Setposz(o1, o2) => write!(f, "setposz {} {}", o1, o2),
-            Verb::Setneg(o1, o2) => write!(f, "setneg {} {}", o1, o2),
-            Verb::Setnegz(o1, o2) => write!(f, "setnegz {} {}", o1, o2),
             Verb::Add(o1, o2) => write!(f, "add {} {}", o1, o2),
             Verb::Sub(o1, o2) => write!(f, "sub {} {}", o1, o2),
             Verb::And(o1, o2) => write!(f, "and {} {}", o1, o2),
@@ -167,10 +142,6 @@ impl fmt::Display for Verb {
 
             Verb::Call(o1) => write!(f, "call {}", o1),
             Verb::Ret => write!(f, "ret"),
-            Verb::Push(o1) => write!(f, "push {}", o1),
-            Verb::Pop(o1) => write!(f, "pop {}", o1),
-            Verb::Ldstk(o1, o2) => write!(f, "ldstk {} {}", o1, o2),
-            Verb::Ststk(o1, o2) => write!(f, "ststk {} {}", o1, o2),
         }
     }
 }
@@ -221,44 +192,16 @@ impl Verb {
                 res[0] = 0xE3;
                 [res[1], res[2]] = operand.to_imm().to_be_bytes();
             }
-            Verb::Jz(imm, r)
-            | Verb::Jnz(imm, r)
-            | Verb::Jpos(imm, r)
-            | Verb::Jposz(imm, r)
-            | Verb::Jneg(imm, r)
-            | Verb::Jnegz(imm, r) => {
+            Verb::Jz(imm, r) | Verb::Jnz(imm, r) => {
                 res[0] = match self {
                     Verb::Jz(_, _) => 0x40,
                     Verb::Jnz(_, _) => 0x50,
-                    Verb::Jpos(_, _) => 0x60,
-                    Verb::Jposz(_, _) => 0x70,
-                    Verb::Jneg(_, _) => 0x80,
-                    Verb::Jnegz(_, _) => 0x90,
                     _ => unreachable!(),
                 };
                 r.to_reg().write_into_byte_lower(&mut res[0]);
                 [res[1], res[2]] = imm.to_imm().to_be_bytes();
             }
 
-            Verb::Setz(ra, rb)
-            | Verb::Setnz(ra, rb)
-            | Verb::Setpos(ra, rb)
-            | Verb::Setposz(ra, rb)
-            | Verb::Setneg(ra, rb)
-            | Verb::Setnegz(ra, rb) => {
-                res[0] = 0xF0;
-                res[1] = match self {
-                    Verb::Setz(_, _) => 0x10,
-                    Verb::Setnz(_, _) => 0x11,
-                    Verb::Setpos(_, _) => 0x12,
-                    Verb::Setposz(_, _) => 0x13,
-                    Verb::Setneg(_, _) => 0x14,
-                    Verb::Setnegz(_, _) => 0x15,
-                    _ => unreachable!(),
-                };
-                ra.to_reg().write_into_byte_upper(&mut res[2]);
-                rb.to_reg().write_into_byte_lower(&mut res[2]);
-            }
             Verb::Add(op1, op2)
             | Verb::Sub(op1, op2)
             | Verb::And(op1, op2)
@@ -343,28 +286,6 @@ impl Verb {
                 res[0] = 0xFF;
                 res[1] = 0xFF;
                 res[2] = 0xF0;
-            }
-            Verb::Push(op) => {
-                res[0] = 0xF0;
-                res[1] = 0x40;
-                op.to_reg().write_into_byte_upper(&mut res[2]);
-            }
-            Verb::Pop(op) => {
-                res[0] = 0xF0;
-                res[1] = 0x41;
-                op.to_reg().write_into_byte_upper(&mut res[2]);
-            }
-            Verb::Ldstk(op1, op2) => {
-                res[0] = 0xF0;
-                res[1] = 0x50;
-                op1.to_reg().write_into_byte_lower(&mut res[1]);
-                res[2] = op2.to_imm().to_be_bytes()[1];
-            }
-            Verb::Ststk(op1, op2) => {
-                res[0] = 0xF0;
-                res[1] = 0x60;
-                op1.to_reg().write_into_byte_lower(&mut res[1]);
-                res[2] = op2.to_imm().to_be_bytes()[1];
             }
         }
         res
