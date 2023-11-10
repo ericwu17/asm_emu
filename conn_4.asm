@@ -68,8 +68,6 @@ ret
     call .handle_middle_btn
     ret
   .handle_btn_press_priv_3
-  dbg COLUMN_0_ADDR
-  dbg COLUMN_6_ADDR
 
   ret
 
@@ -109,10 +107,12 @@ ret
   or r2 r5
   mov [r1] r2
 
-  push r4
+  mov r12 r4
   call .check_hor_win
   call .check_vert_win
-  pop r4
+  call .check_diag_up_win
+  call .check_diag_down_win
+  mov r4 r12
 
   ; toggle next player
   jz .handle_middle_btn_priv_2 r14
@@ -398,102 +398,187 @@ ret
 
 
 .draw_grid_dots
-  mov r1 VGA_END_ADDR
-  add r1 1
+  mov r12 VGA_END_ADDR
+  add r12 1
   
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
+  .draw_grid_dots_begin_loop
+    sub r12 10
+    call .draw_row_dots
+    sub r12 150
+    call .draw_row_dots
 
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
-
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
-
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
-
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
-
-  sub r1 10
-  push r1
-  call .draw_row_dots
-  pop r1
-  sub r1 150
-  push r1
-  call .draw_row_dots
-  pop r1
-
+    ; we break out of loop when r12 == 240
+    mov r13 r12
+    sub r13 240
+  jnz .draw_grid_dots_begin_loop r13
 ret
 
 .draw_row_dots
-  ; parameter: r1 contains the start vga memory address
-  
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+  ; parameter: r12 contains the start vga memory address
+  mov r1 r12
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+  mov r2 0
+  .draw_row_dots_loop_start
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+    mov r3 [r1]
+    or r3 0x8001
+    mov [r1] r3
+    add r1 1
+    
+    add r2 1
+    mov r4 r2
+    sub r4 7
+  jnz .draw_row_dots_loop_start r4
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+ret
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+.check_diag_down_win
+  mov r1 COLUMN_0_ADDR ; column offset, will range from COLUMN_0_ADDR to COLUMN_0_ADDR+3 (inclusive)
 
-  mov r3 [r1]
-  or r3 0x8001
-  mov [r1] r3
-  add r1 1
+  .chk_diag_down_win_begin_outer_loop
+
+    mov r7 3 ; row offset, will range from 3 to 5
+
+    mov r6 r1
+    mov r2 [r6]
+    shr r2 6
+    add r6 1
+    mov r3 [r6]
+    shr r3 4
+    add r6 1
+    mov r4 [r6]
+    shr r4 2
+    add r6 1
+    mov r5 [r6]
+
+
+    .chk_diag_down_win_begin_inner_loop
+      
+      mov r8 r2
+      mov r9 r3
+      mov r10 r4
+      mov r11 r5
+
+      
+      and r8 r9
+      and r8 r10
+      and r8 r11
+      and r8 0x03
+      
+
+      jnz .chk_diag_down_win_affirmative r8
+      jmp .chk_diag_down_win_negative
+      .chk_diag_down_win_affirmative
+        mov [WIN_Y_1] r7
+        sub r7 1
+        mov [WIN_Y_2] r7
+        sub r7 1
+        mov [WIN_Y_3] r7
+        sub r7 1
+        mov [WIN_Y_4] r7
+        sub r1 COLUMN_0_ADDR
+        mov [WIN_X_1] r1
+        add r1 1
+        mov [WIN_X_2] r1
+        add r1 1
+        mov [WIN_X_3] r1
+        add r1 1
+        mov [WIN_X_4] r1
+        mov r1 r8  ; r1 is input which contains which player is winner
+        call .highlight_win
+      .chk_diag_down_win_negative
+      
+      add r7 1
+      shr r2 2
+      shr r3 2
+      shr r4 2
+      shr r5 2
+
+      mov r8 r7
+      sub r8 6
+    jnz .chk_diag_down_win_begin_inner_loop r8
+    
+
+
+    add r1 1
+    mov r2 r1
+    sub r2 COLUMN_4_ADDR
+  jnz .chk_diag_down_win_begin_outer_loop r2
+ret
+
+.check_diag_up_win
+  mov r1 COLUMN_0_ADDR ; column offset, will range from COLUMN_0_ADDR to COLUMN_0_ADDR+3 (inclusive)
+
+  .chk_diag_up_win_begin_outer_loop
+
+    mov r7 0 ; row offset, will range from 0 to 2
+
+    mov r6 r1
+    mov r2 [r6]
+    add r6 1
+    mov r3 [r6]
+    shr r3 2
+    add r6 1
+    mov r4 [r6]
+    shr r4 4
+    add r6 1
+    mov r5 [r6]
+    shr r5 6
+
+    .chk_diag_up_win_begin_inner_loop
+      
+      mov r8 r2
+      mov r9 r3
+      mov r10 r4
+      mov r11 r5
+
+      
+      and r8 r9
+      and r8 r10
+      and r8 r11
+      and r8 0x03
+      
+
+      jnz .chk_diag_up_win_affirmative r8
+      jmp .chk_diag_up_win_negative
+      .chk_diag_up_win_affirmative
+        mov [WIN_Y_1] r7
+        add r7 1
+        mov [WIN_Y_2] r7
+        add r7 1
+        mov [WIN_Y_3] r7
+        add r7 1
+        mov [WIN_Y_4] r7
+        sub r1 COLUMN_0_ADDR
+        mov [WIN_X_1] r1
+        add r1 1
+        mov [WIN_X_2] r1
+        add r1 1
+        mov [WIN_X_3] r1
+        add r1 1
+        mov [WIN_X_4] r1
+        mov r1 r8  ; r1 is input which contains which player is winner
+        call .highlight_win
+      .chk_diag_up_win_negative
+      
+      add r7 1
+      shr r2 2
+      shr r3 2
+      shr r4 2
+      shr r5 2
+
+      mov r8 r7
+      sub r8 3
+    jnz .chk_diag_up_win_begin_inner_loop r8
+    
+
+
+    add r1 1
+    mov r2 r1
+    sub r2 COLUMN_4_ADDR
+  jnz .chk_diag_up_win_begin_outer_loop r2
+
 ret
 
 
