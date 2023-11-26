@@ -14,8 +14,8 @@ impl CpuEmu {
             instrs,
             ip: 0,
             halted: false,
-            regs: [-2; 16],
-            mem: [-2; 65536], // we use -2 to make it easier to spot errors of uninitialized memory
+            regs: [0; 16],
+            mem: [0; 65536],
         }
     }
 
