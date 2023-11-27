@@ -21,6 +21,7 @@ call .draw_cursor_at_column
 .main_loop_begin
   call .wait_for_any_btns_down
   call .handle_btn_press
+  call .handle_btn_press_1
   call .wait_for_all_btns_up
   
   mov [LED_ADDR] r15
@@ -48,6 +49,15 @@ jmp .main_loop_begin
     add r2 1
   jnz .begin_clr_screen_loop r3
 ret
+
+.handle_btn_press_1
+  mov r1 [PUSH_BTNS_ADDR]
+  and r1 0x08
+  jz .handle_btn_press_priv_4 r1
+    call .handle_down_btn
+    ret
+  .handle_btn_press_priv_4
+  ret
 
 .handle_btn_press
   mov r1 [PUSH_BTNS_ADDR]
@@ -157,6 +167,33 @@ ret
   mov r15 6
   mov r1 r15
   call .draw_cursor_at_column
+  ret
+.handle_down_btn
+  mov r1 0
+  mov [COLUMN_0_ADDR] r1
+  mov [COLUMN_1_ADDR] r1
+  mov [COLUMN_2_ADDR] r1
+  mov [COLUMN_3_ADDR] r1
+  mov [COLUMN_4_ADDR] r1
+  mov [COLUMN_5_ADDR] r1
+  mov [COLUMN_6_ADDR] r1
+  mov [WIN_X_1] r1
+  mov [WIN_Y_1] r1
+  mov [WIN_X_2] r1
+  mov [WIN_Y_2] r1
+  mov [WIN_X_3] r1
+  mov [WIN_Y_3] r1
+  mov [WIN_X_4] r1
+  mov [WIN_Y_4] r1
+  call .clear_screen
+  call .draw_grid_dots
+  mov r1 3
+  call .draw_cursor_at_column
+
+  mov r15 3  ; current cursor
+  mov r14 0  ; next player to move (player 0 goes first, player 1 goes next)
+
+  jmp .main_loop_begin
   ret
 
 
@@ -750,7 +787,7 @@ ret
   call .draw_blank
 
   call .busy_wait
-jmp .highlight_win_player_0
+  jmp .highlight_win_player_0
 
 .highlight_win_player_1
   mov r1 [WIN_X_1]
@@ -782,10 +819,14 @@ jmp .highlight_win_player_0
   call .draw_blank
 
   call .busy_wait
-jmp .highlight_win_player_1
+
+  
 
 .busy_wait
   mov r1 0
+  call .wait_for_any_btns_down
+  call .handle_btn_press_1
+  call .wait_for_all_btns_up
   .busy_wait_loop
     add r1 1
     mov r2 r1
