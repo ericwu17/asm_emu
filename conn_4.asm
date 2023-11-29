@@ -21,7 +21,6 @@ call .draw_cursor_at_column
 .main_loop_begin
   call .wait_for_any_btns_down
   call .handle_btn_press
-  call .handle_btn_press_1
   call .wait_for_all_btns_up
   
   mov [LED_ADDR] r15
@@ -49,15 +48,6 @@ jmp .main_loop_begin
     add r2 1
   jnz .begin_clr_screen_loop r3
 ret
-
-.handle_btn_press_1
-  mov r1 [PUSH_BTNS_ADDR]
-  and r1 0x08
-  jz .handle_btn_press_priv_4 r1
-    call .handle_down_btn
-    ret
-  .handle_btn_press_priv_4
-  ret
 
 .handle_btn_press
   mov r1 [PUSH_BTNS_ADDR]
@@ -168,7 +158,7 @@ ret
   mov r1 r15
   call .draw_cursor_at_column
   ret
-.handle_down_btn
+.reset_program
   mov r1 0
   mov [COLUMN_0_ADDR] r1
   mov [COLUMN_1_ADDR] r1
@@ -192,9 +182,9 @@ ret
 
   mov r15 3  ; current cursor
   mov r14 0  ; next player to move (player 0 goes first, player 1 goes next)
+  mov r0 0x500 ; reset stack pointer
 
-  jmp .main_loop_begin
-  ret
+jmp .main_loop_begin
 
 
 .draw_cursor_at_column
@@ -787,7 +777,7 @@ ret
   call .draw_blank
 
   call .busy_wait
-  jmp .highlight_win_player_0
+jmp .highlight_win_player_0
 
 .highlight_win_player_1
   mov r1 [WIN_X_1]
@@ -819,14 +809,16 @@ ret
   call .draw_blank
 
   call .busy_wait
-
+jmp .highlight_win_player_1
   
 
 .busy_wait
   mov r1 0
-  call .wait_for_any_btns_down
-  call .handle_btn_press_1
-  call .wait_for_all_btns_up
+  mov r2 [DIP_SWITCH_ADDR]
+  jz .busy_wait_loop r2
+  jmp .reset_program
+
+  
   .busy_wait_loop
     add r1 1
     mov r2 r1
