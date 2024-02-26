@@ -4,6 +4,10 @@ This is an assembler and emulator for a custom instruction set.
 The instruction set was implemented in Verilog to run on the basys3 FPGA board.
 This was my final project for the CS M152A class.
 
+The [src](/src) folder contains the rust code for the emulator and assembler,
+while the [cpu_unit](/cpu_unit) folder contains the Verilog code, which can
+be opened through the Xilinx Vivado IDE.
+
 The instructions set is very simple, with each instruction encoded in 24 bits. A full list of
 supported instructions is:
 
