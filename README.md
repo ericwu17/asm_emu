@@ -4,6 +4,17 @@ This is an assembler and emulator for a custom instruction set.
 The instruction set was implemented in Verilog to run on the basys3 FPGA board.
 This was my final project for the CS M152A class.
 
+The instructions set is very simple, with each instruction encoded in 24 bits. A full list of
+supported instructions is:
+
+  - `call` and `ret` for subroutine calls
+  - `mov` instructions between registers, to load/store from memory, and load immediates
+  - `jmp`, `jz`, and `jnz` are unconditional and conditional jumps.
+  - Arithmetic instructions include `add`, `sub`, bitwise `and`, `or`, `not`, and `shl` and `shr`
+  for bit shifting
+  - There are some debug instructions which are treated by no-ops by hardware, but used to
+  dump processor state when executing under emulation.
+
 ## Architecture
 
 The instruction set is meant to be run on the basys3 FPGA. I/O is memory-mapped.
